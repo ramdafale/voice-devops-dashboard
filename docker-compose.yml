@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: voice-devops-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: voice_devops
+      MYSQL_USER: devops_user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - voice-devops-network
+
+  # Voice DevOps API
+  voice-devops-api:
+    build:
+      context: ./voice-devops-api
+      dockerfile: Dockerfile
+    container_name: voice-devops-api
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/voice_devops?useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: devops_user
+      SPRING_DATASOURCE_PASSWORD: password
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+    networks:
+      - voice-devops-network
+    restart: unless-stopped
+
+  # Mock Jenkins Service (for demo)
+  mock-jenkins:
+    image: nginx:alpine
+    container_name: mock-jenkins
+    ports:
+      - "8081:80"
+    volumes:
+      - ./mock-jenkins-service/html:/usr/share/nginx/html
+    networks:
+      - voice-devops-network
+
+  # Mock GitHub Service (for demo)
+  mock-github:
+    image: nginx:alpine
+    container_name: mock-github
+    ports:
+      - "8082:80"
+    volumes:
+      - ./mock-github-service/html:/usr/share/nginx/html
+    networks:
+      - voice-devops-network
+
+volumes:
+  mysql_data:
+
+networks:
+  voice-devops-network:
+    driver: bridge 
