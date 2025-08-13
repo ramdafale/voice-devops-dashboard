@@ -65,6 +65,12 @@ public class Build {
     @Lob
     private String buildLog;
     
+    @Column(name = "api_name")
+    private String apiName;
+    
+    @Column(name = "deployment_progress")
+    private Integer deploymentProgress = 0;
+    
     public enum BuildStatus {
         QUEUED, RUNNING, SUCCESS, FAILED, ABORTED, PENDING_APPROVAL
     }

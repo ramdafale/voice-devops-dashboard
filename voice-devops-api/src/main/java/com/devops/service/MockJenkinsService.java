@@ -3,6 +3,8 @@ package com.devops.service;
 import com.devops.entity.*;
 import com.devops.repository.*;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -10,8 +12,9 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
-@Slf4j
 public class MockJenkinsService {
+    
+    private static final Logger log = LoggerFactory.getLogger(MockJenkinsService.class);
     
     @Autowired
     private BuildRepository buildRepository;
@@ -234,6 +237,68 @@ public class MockJenkinsService {
             log.error("Error getting user builds", e);
             return new VoiceCommandProcessor.CommandResponse("Error getting builds: " + e.getMessage(), false);
         }
+    }
+    
+    public VoiceCommandProcessor.CommandResponse deployApi(Map<String, String> parameters, User user) {
+        try {
+            String apiName = parameters.get("apiName");
+            if (apiName == null) {
+                return new VoiceCommandProcessor.CommandResponse("API name not specified", false);
+            }
+            
+            // Create an API deployment with progress tracking
+            Build build = new Build();
+            build.setJenkinsBuildId("API-" + buildCounter.incrementAndGet());
+            build.setJobName("api-deploy");
+            build.setBranchName(apiName + "-api");
+            build.setApiName(apiName);
+            build.setBuildNumber(buildCounter.get());
+            build.setStatus(Build.BuildStatus.RUNNING);
+            build.setEnvironment("production");
+            build.setRequiresApproval(false);
+            build.setTriggeredBy(user);
+            build.setDeploymentProgress(0);
+            build.setBuildUrl("http://mock-jenkins.company.com/job/api-deploy/" + build.getBuildNumber());
+            build.setStartedAt(LocalDateTime.now());
+            
+            buildRepository.save(build);
+            
+            log.info("API deployment triggered for {} by {}", apiName, user.getUsername());
+            
+            // Start progress simulation in background
+            simulateApiDeploymentProgress(build);
+            
+            return new VoiceCommandProcessor.CommandResponse(
+                "API deployment started for " + apiName + ". Build ID: " + build.getJenkinsBuildId() + 
+                ". Progress tracking enabled.", true);
+                
+        } catch (Exception e) {
+            log.error("Error deploying API", e);
+            return new VoiceCommandProcessor.CommandResponse("Error deploying API: " + e.getMessage(), false);
+        }
+    }
+    
+    private void simulateApiDeploymentProgress(Build build) {
+        new Thread(() -> {
+            try {
+                for (int progress = 0; progress <= 100; progress += 10) {
+                    Thread.sleep(2000); // Update every 2 seconds
+                    build.setDeploymentProgress(progress);
+                    buildRepository.save(build);
+                    
+                    if (progress == 100) {
+                        build.setStatus(Build.BuildStatus.SUCCESS);
+                        build.setCompletedAt(LocalDateTime.now());
+                        build.setDurationSeconds(20L); // 20 seconds total
+                        buildRepository.save(build);
+                        log.info("API deployment completed for {}", build.getApiName());
+                    }
+                }
+            } catch (InterruptedException e) {
+                log.error("Progress simulation interrupted", e);
+                Thread.currentThread().interrupt();
+            }
+        }).start();
     }
     
     public VoiceCommandProcessor.CommandResponse getBuildStatus(Map<String, String> parameters, User user) {

@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mock GitHub Service - Voice DevOps Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #24292e 0%, #586069 100%);
+            min-height: 100vh;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: #fff !important;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background: linear-gradient(45deg, #24292e, #586069);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            font-weight: bold;
+        }
+        .pr-item {
+            border-left: 4px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        .pr-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .status-open { border-left-color: #28a745; }
+        .status-merged { border-left-color: #6f42c1; }
+        .status-closed { border-left-color: #dc3545; }
+        .status-draft { border-left-color: #6c757d; }
+        .btn-voice {
+            background: linear-gradient(45deg, #24292e, #586069);
+            border: none;
+            color: white;
+            border-radius: 25px;
+            padding: 10px 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .btn-voice:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .voice-indicator {
+            display: none;
+            color: #dc3545;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .stats-card {
+            background: linear-gradient(45deg, #24292e, #586069);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .branch-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            background: #e1e4e8;
+            color: #24292e;
+        }
+        .repo-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid #e1e4e8;
+        }
+        .commit-item {
+            background: #f6f8fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 5px 0;
+        }
+        .file-change {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 2px 0;
+        }
+        .file-added { background: #e6ffed; color: #22863a; }
+        .file-modified { background: #fff5b1; color: #b08800; }
+        .file-deleted { background: #ffeef0; color: #cb2431; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fab fa-github me-2"></i>Mock GitHub Service
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text">
+                    <i class="fas fa-microphone me-2"></i>Voice DevOps Integration
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Voice Command Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-microphone me-2"></i>Voice Commands
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h5>Available Voice Commands:</h5>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>"Create pull request for feature-branch"</li>
+                            <li><i class="fas fa-check text-success me-2"></i>"Show my recent pull requests"</li>
+                            <li><i class="fas fa-check text-success me-2"></i>"Merge pull request 123"</li>
+                            <li><i class="fas fa-check text-success me-2"></i>"Check branch status feature-branch"</li>
+                            <li><i class="fas fa-check text-success me-2"></i>"Show repository statistics"</li>
+                            <li><i class="fas fa-check text-success me-2"></i>"Review pull request 123"</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <button class="btn btn-voice btn-lg" onclick="startVoiceRecognition()">
+                            <i class="fas fa-microphone me-2"></i>Start Voice
+                        </button>
+                        <div class="voice-indicator mt-2" id="voiceIndicator">
+                            <i class="fas fa-microphone-alt fa-2x"></i>
+                            <p>Listening...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="totalPRs">18</div>
+                    <div>Total PRs</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="openPRs">5</div>
+                    <div>Open PRs</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="mergedPRs">12</div>
+                    <div>Merged PRs</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="activeBranches">8</div>
+                    <div>Active Branches</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pull Requests -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-code-branch me-2"></i>Pull Requests
+            </div>
+            <div class="card-body">
+                <div id="pullRequestsContainer">
+                    <!-- Pull requests will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Repository Overview -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-folder me-2"></i>Repository Overview
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Recent Commits</h5>
+                        <div id="recentCommits">
+                            <!-- Recent commits will be populated here -->
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>File Changes</h5>
+                        <div id="fileChanges">
+                            <!-- File changes will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Branch Management -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-sitemap me-2"></i>Branch Management
+            </div>
+            <div class="card-body">
+                <div id="branchManagement">
+                    <!-- Branch management will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mock data for pull requests
+        const mockPullRequests = [
+            {
+                id: 'PR-123',
+                title: 'Add voice command feature',
+                sourceBranch: 'feature/voice-commands',
+                targetBranch: 'develop',
+                author: 'developer',
+                status: 'OPEN',
+                createdAt: '2024-01-15 10:30:00',
+                url: 'http://mock-github.company.com/pull/123',
+                description: 'Implement voice command functionality for DevOps dashboard',
+                reviewStatus: 'PENDING',
+                mergeable: true,
+                filesChanged: 15,
+                additions: 234,
+                deletions: 45
+            },
+            {
+                id: 'PR-122',
+                title: 'Fix authentication bug',
+                sourceBranch: 'feature/user-authentication',
+                targetBranch: 'develop',
+                author: 'developer',
+                status: 'MERGED',
+                createdAt: '2024-01-14 15:20:00',
+                mergedAt: '2024-01-15 09:15:00',
+                mergedBy: 'admin',
+                url: 'http://mock-github.company.com/pull/122',
+                description: 'Fix authentication issue in user login flow',
+                reviewStatus: 'APPROVED',
+                mergeable: true,
+                filesChanged: 8,
+                additions: 156,
+                deletions: 23
+            },
+            {
+                id: 'PR-121',
+                title: 'Update documentation',
+                sourceBranch: 'feature/docs-update',
+                targetBranch: 'main',
+                author: 'developer',
+                status: 'CLOSED',
+                createdAt: '2024-01-13 14:10:00',
+                closedAt: '2024-01-14 11:30:00',
+                closedBy: 'developer',
+                url: 'http://mock-github.company.com/pull/121',
+                description: 'Update API documentation with new endpoints',
+                reviewStatus: 'CHANGES_REQUESTED',
+                mergeable: false,
+                filesChanged: 12,
+                additions: 89,
+                deletions: 12
+            },
+            {
+                id: 'PR-124',
+                title: 'Implement CI/CD pipeline',
+                sourceBranch: 'feature/ci-cd-pipeline',
+                targetBranch: 'develop',
+                author: 'devops-engineer',
+                status: 'OPEN',
+                createdAt: '2024-01-15 12:45:00',
+                url: 'http://mock-github.company.com/pull/124',
+                description: 'Set up continuous integration and deployment pipeline',
+                reviewStatus: 'APPROVED',
+                mergeable: true,
+                filesChanged: 25,
+                additions: 567,
+                deletions: 123
+            },
+            {
+                id: 'PR-125',
+                title: 'Add unit tests',
+                sourceBranch: 'feature/unit-tests',
+                targetBranch: 'develop',
+                author: 'developer',
+                status: 'DRAFT',
+                createdAt: '2024-01-15 13:20:00',
+                url: 'http://mock-github.company.com/pull/125',
+                description: 'Add comprehensive unit tests for core functionality',
+                reviewStatus: 'PENDING',
+                mergeable: false,
+                filesChanged: 18,
+                additions: 445,
+                deletions: 0
+            }
+        ];
+
+        // Mock data for commits
+        const mockCommits = [
+            {
+                hash: 'a1b2c3d4',
+                message: 'Add voice command processor',
+                author: 'developer',
+                date: '2024-01-15 14:30:00',
+                branch: 'feature/voice-commands'
+            },
+            {
+                hash: 'e5f6g7h8',
+                message: 'Fix authentication bug',
+                author: 'developer',
+                date: '2024-01-15 13:45:00',
+                branch: 'feature/user-authentication'
+            },
+            {
+                hash: 'i9j0k1l2',
+                message: 'Update API documentation',
+                author: 'developer',
+                date: '2024-01-15 12:20:00',
+                branch: 'feature/docs-update'
+            },
+            {
+                hash: 'm3n4o5p6',
+                message: 'Implement CI/CD pipeline',
+                author: 'devops-engineer',
+                date: '2024-01-15 11:15:00',
+                branch: 'feature/ci-cd-pipeline'
+            }
+        ];
+
+        // Mock data for file changes
+        const mockFileChanges = [
+            { file: 'src/main/java/com/devops/service/VoiceCommandProcessor.java', status: 'modified', additions: 45, deletions: 12 },
+            { file: 'src/main/java/com/devops/controller/VoiceController.java', status: 'added', additions: 23, deletions: 0 },
+            { file: 'src/main/resources/application.properties', status: 'modified', additions: 8, deletions: 3 },
+            { file: 'src/test/java/com/devops/service/VoiceCommandProcessorTest.java', status: 'added', additions: 67, deletions: 0 },
+            { file: 'docs/api-documentation.md', status: 'deleted', additions: 0, deletions: 15 }
+        ];
+
+        // Voice recognition simulation
+        function startVoiceRecognition() {
+            const voiceBtn = document.querySelector('.btn-voice');
+            const voiceIndicator = document.getElementById('voiceIndicator');
+            
+            voiceBtn.style.display = 'none';
+            voiceIndicator.style.display = 'block';
+            
+            // Simulate voice command processing
+            setTimeout(() => {
+                const commands = [
+                    "Create pull request for feature-branch",
+                    "Show my recent pull requests",
+                    "Merge pull request 123",
+                    "Check branch status feature-branch",
+                    "Show repository statistics",
+                    "Review pull request 123"
+                ];
+                
+                const randomCommand = commands[Math.floor(Math.random() * commands.length)];
+                processVoiceCommand(randomCommand);
+                
+                voiceBtn.style.display = 'block';
+                voiceIndicator.style.display = 'none';
+            }, 3000);
+        }
+
+        function processVoiceCommand(command) {
+            console.log('Processing voice command:', command);
+            
+            // Simulate API call to voice DevOps dashboard
+            fetch('http://localhost:8080/api/voice/command', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    command: command,
+                    userId: 'developer'
+                })
+            }).then(response => response.json())
+            .then(data => {
+                showNotification('Voice Command Processed', data.message || 'Command executed successfully', 'success');
+                updateData();
+            }).catch(error => {
+                showNotification('Voice Command Error', 'Failed to process voice command', 'error');
+            });
+        }
+
+        function showNotification(title, message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                <strong>${title}:</strong> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.card'));
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        function renderPullRequests() {
+            const container = document.getElementById('pullRequestsContainer');
+            container.innerHTML = '';
+            
+            mockPullRequests.forEach(pr => {
+                const prElement = createPRElement(pr);
+                container.appendChild(prElement);
+            });
+        }
+
+        function createPRElement(pr) {
+            const prDiv = document.createElement('div');
+            prDiv.className = `pr-item status-${pr.status.toLowerCase()}`;
+            
+            const statusIcon = getPRStatusIcon(pr.status);
+            const reviewBadge = getReviewBadge(pr.reviewStatus);
+            const mergeButton = pr.status === 'OPEN' && pr.mergeable ? `
+                <button class="btn btn-success btn-sm mt-2" onclick="mergePR('${pr.id}')">
+                    <i class="fas fa-code-branch me-1"></i>Merge
+                </button>
+            ` : '';
+            
+            prDiv.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h5 class="mb-1">${pr.id}: ${pr.title}</h5>
+                        <p class="mb-1"><strong>Branch:</strong> ${pr.sourceBranch} → ${pr.targetBranch}</p>
+                        <p class="mb-1"><strong>Author:</strong> ${pr.author}</p>
+                        <p class="mb-1"><strong>Status:</strong> ${statusIcon} ${pr.status}</p>
+                        <p class="mb-1"><strong>Created:</strong> ${pr.createdAt}</p>
+                        ${pr.mergedAt ? `<p class="mb-1"><strong>Merged:</strong> ${pr.mergedAt} by ${pr.mergedBy}</p>` : ''}
+                        <p class="mb-1"><strong>Files Changed:</strong> ${pr.filesChanged} (+${pr.additions} -${pr.deletions})</p>
+                        <p class="mb-2"><strong>Description:</strong> ${pr.description}</p>
+                    </div>
+                    <div class="text-end">
+                        ${reviewBadge}
+                        ${mergeButton}
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <a href="${pr.url}" target="_blank" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-external-link-alt me-1"></i>View PR
+                    </a>
+                </div>
+            `;
+            
+            return prDiv;
+        }
+
+        function getPRStatusIcon(status) {
+            const icons = {
+                'OPEN': '<i class="fas fa-code-branch text-success"></i>',
+                'MERGED': '<i class="fas fa-check-circle text-primary"></i>',
+                'CLOSED': '<i class="fas fa-times-circle text-danger"></i>',
+                'DRAFT': '<i class="fas fa-edit text-secondary"></i>'
+            };
+            return icons[status] || '<i class="fas fa-question-circle text-secondary"></i>';
+        }
+
+        function getReviewBadge(reviewStatus) {
+            const badges = {
+                'APPROVED': '<span class="badge bg-success">Approved</span>',
+                'PENDING': '<span class="badge bg-warning">Pending Review</span>',
+                'CHANGES_REQUESTED': '<span class="badge bg-danger">Changes Requested</span>'
+            };
+            return badges[reviewStatus] || '<span class="badge bg-secondary">No Review</span>';
+        }
+
+        function mergePR(prId) {
+            const pr = mockPullRequests.find(p => p.id === prId);
+            if (pr && pr.status === 'OPEN') {
+                pr.status = 'MERGED';
+                pr.mergedAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
+                pr.mergedBy = 'admin';
+                renderPullRequests();
+                showNotification('PR Merged', `Pull request ${prId} has been merged successfully`, 'success');
+            }
+        }
+
+        function renderCommits() {
+            const container = document.getElementById('recentCommits');
+            container.innerHTML = '';
+            
+            mockCommits.forEach(commit => {
+                const commitDiv = document.createElement('div');
+                commitDiv.className = 'commit-item';
+                commitDiv.innerHTML = `
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <strong>${commit.hash.substring(0, 8)}</strong>
+                            <p class="mb-1">${commit.message}</p>
+                            <small class="text-muted">${commit.author} • ${commit.date}</small>
+                        </div>
+                        <span class="branch-badge">${commit.branch}</span>
+                    </div>
+                `;
+                container.appendChild(commitDiv);
+            });
+        }
+
+        function renderFileChanges() {
+            const container = document.getElementById('fileChanges');
+            container.innerHTML = '';
+            
+            mockFileChanges.forEach(file => {
+                const fileDiv = document.createElement('div');
+                fileDiv.className = `file-change file-${file.status}`;
+                fileDiv.innerHTML = `
+                    <span>${file.file}</span>
+                    <span class="badge bg-${file.status === 'added' ? 'success' : file.status === 'modified' ? 'warning' : 'danger'}">
+                        ${file.status} (+${file.additions} -${file.deletions})
+                    </span>
+                `;
+                container.appendChild(fileDiv);
+            });
+        }
+
+        function renderBranchManagement() {
+            const container = document.getElementById('branchManagement');
+            container.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Active Branches</h5>
+                        <div class="repo-card">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="branch-badge">main</span>
+                                <span class="text-success">Protected</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="branch-badge">develop</span>
+                                <span class="text-warning">Protected</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="branch-badge">feature/voice-commands</span>
+                                <span class="text-info">Active</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="branch-badge">feature/user-authentication</span>
+                                <span class="text-success">Merged</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Branch Protection Rules</h5>
+                        <div class="repo-card">
+                            <div class="mb-2">
+                                <strong>main:</strong> Requires PR reviews, status checks
+                            </div>
+                            <div class="mb-2">
+                                <strong>develop:</strong> Requires PR reviews
+                            </div>
+                            <div class="mb-2">
+                                <strong>feature/*:</strong> No restrictions
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateData() {
+            renderPullRequests();
+            renderCommits();
+            renderFileChanges();
+            renderBranchManagement();
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            updateData();
+        });
+    </script>
+</body>
+</html> 

@@ -21,15 +21,14 @@
 
     <modules>
         <module>voice-devops-api</module>
-        <module>voice-devops-gateway</module>
-        <module>voice-devops-auth</module>
-        <module>voice-devops-dashboard</module>
         <module>mock-jenkins-service</module>
         <module>mock-github-service</module>
     </modules>
 
     <properties>
         <java.version>17</java.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <spring-cloud.version>2023.0.0</spring-cloud.version>
         <graphql.version>21.0</graphql.version>
         <mysql.version>8.0.33</mysql.version>

@@ -5,6 +5,8 @@ import com.devops.entity.User;
 import com.devops.repository.BuildRepository;
 import com.devops.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,8 +16,9 @@ import java.util.Arrays;
 import java.util.List;
 
 @Service
-@Slf4j
 public class DataInitializationService implements CommandLineRunner {
+    
+    private static final Logger log = LoggerFactory.getLogger(DataInitializationService.class);
     
     @Autowired
     private UserRepository userRepository;
@@ -86,6 +89,16 @@ public class DataInitializationService implements CommandLineRunner {
             createBuild("PROD-1002", "production-deploy", "release-2.0.5", 
                        Build.BuildStatus.PENDING_APPROVAL, "production", true, admin, developer),
             
+            // API Deployments
+            createApiBuild("API-1001", "api-deploy", "rewards-api", "rewards", 
+                          Build.BuildStatus.RUNNING, "production", false, developer, developer, 45),
+            createApiBuild("API-1002", "api-deploy", "payment-api", "payment", 
+                          Build.BuildStatus.SUCCESS, "production", false, developer, developer, 100),
+            createApiBuild("API-1003", "api-deploy", "auth-api", "auth", 
+                          Build.BuildStatus.SUCCESS, "production", false, developer, developer, 100),
+            createApiBuild("API-1004", "api-deploy", "user-api", "user", 
+                          Build.BuildStatus.FAILED, "production", false, developer, developer, 0),
+            
             // Running builds
             createBuild("BUILD-1001", "feature-build", "feature-branch", 
                        Build.BuildStatus.RUNNING, "development", false, developer, developer),
@@ -123,6 +136,36 @@ public class DataInitializationService implements CommandLineRunner {
         build.setEnvironment(environment);
         build.setRequiresApproval(requiresApproval);
         build.setTriggeredBy(triggeredBy);
+        build.setBuildUrl("http://mock-jenkins.company.com/job/" + jobName + "/" + build.getBuildNumber());
+        build.setStartedAt(LocalDateTime.now().minusMinutes(30));
+        
+        if (status == Build.BuildStatus.SUCCESS || status == Build.BuildStatus.FAILED) {
+            build.setCompletedAt(LocalDateTime.now().minusMinutes(5));
+            build.setDurationSeconds(300L); // 5 minutes
+        }
+        
+        if (status == Build.BuildStatus.SUCCESS && requiresApproval) {
+            build.setApprovedBy(approver.getUsername());
+            build.setApprovedAt(LocalDateTime.now().minusMinutes(25));
+        }
+        
+        return build;
+    }
+    
+    private Build createApiBuild(String jenkinsBuildId, String jobName, String branchName, String apiName,
+                               Build.BuildStatus status, String environment, boolean requiresApproval, 
+                               User triggeredBy, User approver, Integer progress) {
+        Build build = new Build();
+        build.setJenkinsBuildId(jenkinsBuildId);
+        build.setJobName(jobName);
+        build.setBranchName(branchName);
+        build.setApiName(apiName);
+        build.setBuildNumber(Integer.parseInt(jenkinsBuildId.split("-")[1]));
+        build.setStatus(status);
+        build.setEnvironment(environment);
+        build.setRequiresApproval(requiresApproval);
+        build.setTriggeredBy(triggeredBy);
+        build.setDeploymentProgress(progress);
         build.setBuildUrl("http://mock-jenkins.company.com/job/" + jobName + "/" + build.getBuildNumber());
         build.setStartedAt(LocalDateTime.now().minusMinutes(30));
         

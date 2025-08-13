@@ -50,10 +50,35 @@ A comprehensive voice-controlled DevOps automation system with role-based dashbo
 
 ## 📋 Prerequisites
 
-- Java 17 or higher
-- MySQL 8.0
-- Maven 3.6+
-- Node.js (for frontend development)
+- **Java 17 or higher** (OpenJDK 17 recommended)
+- **Maven 3.6+**
+- **MySQL 8.0** (for production) or **H2** (for local development)
+- **Node.js** (for frontend development, optional)
+
+## 🚀 Local Development Setup
+
+### Quick Setup (Recommended)
+
+1. **Open PowerShell as Administrator**
+2. **Navigate to project directory:**
+   ```powershell
+   cd "C:\cursor project\voice-devops-dashboard"
+   ```
+3. **Run automated setup:**
+   ```powershell
+   .\setup-local-dev.ps1
+   ```
+
+### Manual Setup
+
+See [LOCAL_DEVELOPMENT_SETUP.md](LOCAL_DEVELOPMENT_SETUP.md) for detailed manual installation instructions.
+
+### Verify Setup
+
+After installation, verify everything is working:
+```powershell
+.\verify-setup.ps1
+```
 
 ## 🚀 Quick Start
 
@@ -103,6 +128,8 @@ mvn spring-boot:run -pl voice-devops-api
 
 - **Admin Dashboard**: http://localhost:8080/admin-dashboard.html
 - **User Dashboard**: http://localhost:8080/user-dashboard.html
+- **Mock Jenkins Portal**: http://localhost:8081
+- **Mock GitHub Portal**: http://localhost:8082
 - **API Documentation**: http://localhost:8080/api
 
 ## 🎯 Demo Scenarios
@@ -165,7 +192,11 @@ voice-devops-dashboard/
 │       ├── admin-dashboard.html
 │       └── user-dashboard.html
 ├── mock-jenkins-service/            # Mock Jenkins service
+│   └── html/
+│       └── index.html               # Interactive Jenkins portal
 ├── mock-github-service/             # Mock GitHub service
+│   └── html/
+│       └── index.html               # Interactive GitHub portal
 └── pom.xml                          # Parent POM
 ```
 

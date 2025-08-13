@@ -38,4 +38,7 @@ public interface BuildRepository extends JpaRepository<Build, Long> {
     
     @Query("SELECT COUNT(b) FROM Build b WHERE b.status = 'FAILED' AND b.startedAt >= :since")
     Long countFailedBuildsSince(@Param("since") LocalDateTime since);
+    
+    @Query("SELECT b FROM Build b WHERE b.apiName IS NOT NULL ORDER BY b.startedAt DESC")
+    List<Build> findApiDeployments();
 } 

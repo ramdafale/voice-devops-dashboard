@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Command Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .command-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .submit-btn {
+            background: #007bff;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        .submit-btn:hover {
+            background: #0056b3;
+        }
+        .response {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .examples {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .example-command {
+            background: #fff;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            border-left: 3px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Voice Command Test</h1>
+        <p>Test the voice command functionality by entering commands below:</p>
+        
+        <div class="examples">
+            <h3>Example Commands:</h3>
+            <div class="example-command"><strong>Admin Commands:</strong></div>
+            <div class="example-command">• "deploy main to production"</div>
+            <div class="example-command">• "orchestrate deployment production"</div>
+            <div class="example-command">• "analyze deployment main"</div>
+            <div class="example-command">• "approve build"</div>
+            <div class="example-command">• "generate report"</div>
+            
+            <div class="example-command"><strong>User Commands:</strong></div>
+            <div class="example-command">• "build feature"</div>
+            <div class="example-command">• "deploy feature to staging"</div>
+            <div class="example-command">• "show my builds"</div>
+            <div class="example-command">• "check status"</div>
+        </div>
+        
+        <form id="voiceCommandForm">
+            <input type="text" id="username" class="command-input" placeholder="Enter username (e.g., admin, user)" value="admin">
+            <input type="text" id="voiceCommand" class="command-input" placeholder="Enter voice command here..." value="deploy main to production">
+            <button type="submit" class="submit-btn">🚀 Execute Command</button>
+        </form>
+        
+        <div id="response" class="response" style="display: none;"></div>
+    </div>
+
+    <script>
+        document.getElementById('voiceCommandForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const command = document.getElementById('voiceCommand').value.trim();
+            const responseDiv = document.getElementById('response');
+            
+            if (!username || !command) {
+                alert('Please enter both username and command');
+                return;
+            }
+            
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response';
+            responseDiv.textContent = 'Processing command...';
+            
+            try {
+                const formData = new FormData();
+                formData.append('command', command);
+                formData.append('username', username);
+                
+                const response = await fetch('/api/voice/command', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    responseDiv.className = 'response success';
+                    responseDiv.textContent = `✅ SUCCESS:\n\n${result.message}`;
+                } else {
+                    responseDiv.className = 'response error';
+                    responseDiv.textContent = `❌ ERROR:\n\n${result.message}`;
+                }
+                
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.textContent = `❌ NETWORK ERROR:\n\n${error.message}`;
+            }
+        });
+        
+        // Auto-fill with example commands
+        document.getElementById('voiceCommand').addEventListener('focus', function() {
+            if (this.value === 'deploy main to production') {
+                this.select();
+            }
+        });
+    </script>
+</body>
+</html> 

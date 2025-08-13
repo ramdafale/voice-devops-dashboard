@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .voice-btn {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
+        }
+        
+        .voice-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
+        }
+        
+        .voice-btn.recording {
+            background: linear-gradient(45deg, #4ecdc4, #2c3e50);
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .dashboard-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .status-success { color: #2ed573; }
+        .status-failed { color: #ff4757; }
+        .status-running { color: #3742fa; }
+        .status-pending { color: #ffa502; }
+        
+        .voice-response {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .command-list {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .command-item {
+            background: white;
+            padding: 10px 15px;
+            margin: 5px 0;
+            border-radius: 8px;
+            border-left: 4px solid #4ecdc4;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .branch-input {
+            border: 2px solid #4ecdc4;
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        
+        .branch-input:focus {
+            box-shadow: 0 0 0 0.2rem rgba(78, 205, 196, 0.25);
+            border-color: #4ecdc4;
+        }
+    </style>
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .branch-input {
+            border: 2px solid #4ecdc4;
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        
+        .branch-input:focus {
+            box-shadow: 0 0 0 0.2rem rgba(78, 205, 196, 0.25);
+            border-color: #4ecdc4;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="row bg-white shadow-sm py-3 mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h1 class="mb-0">
+                        <i class="fas fa-code text-success"></i>
+                        Developer Dashboard
+                    </h1>
+                    <div class="voice-controls">
+                        <button id="startVoice" class="voice-btn">
+                            <i class="fas fa-microphone"></i> Start Voice
+                        </button>
+                        <button id="stopVoice" class="voice-btn" style="display:none;">
+                            <i class="fas fa-stop"></i> Stop Voice
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Voice Response Area -->
+        <div id="voiceResponse" class="voice-response">
+            <div id="voiceText" class="mb-2"></div>
+            <div id="commandResult"></div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="row">
+            <!-- Statistics -->
+            <div class="col-12 mb-4">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="myBuilds">0</div>
+                        <div class="stat-label">My Builds</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="successfulBuilds">0</div>
+                        <div class="stat-label">Successful</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="failedBuilds">0</div>
+                        <div class="stat-label">Failed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="voiceCommands">0</div>
+                        <div class="stat-label">Voice Commands</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Builds -->
+            <div class="col-md-6">
+                <div class="dashboard-card">
+                    <h3><i class="fas fa-cogs text-primary"></i> My Recent Builds</h3>
+                    <div id="myBuildsList" class="mt-3">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="col-md-6">
+                <div class="dashboard-card">
+                    <h3><i class="fas fa-rocket text-warning"></i> Quick Actions</h3>
+                    <div class="row mt-3">
+                        <div class="col-12 mb-3">
+                            <input type="text" id="branchInput" class="form-control branch-input" 
+                                   placeholder="Enter branch name (e.g., feature-branch)">
+                        </div>
+                        <div class="col-6 mb-2">
+                            <button class="btn btn-primary w-100" onclick="buildBranch()">
+                                <i class="fas fa-play"></i> Build Branch
+                            </button>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <button class="btn btn-success w-100" onclick="deployToStaging()">
+                                <i class="fas fa-cloud-upload-alt"></i> Deploy to Staging
+                            </button>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <button class="btn btn-info w-100" onclick="createPullRequest()">
+                                <i class="fas fa-code-branch"></i> Create PR
+                            </button>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <button class="btn btn-secondary w-100" onclick="showMyBuilds()">
+                                <i class="fas fa-list"></i> Show My Builds
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Voice Commands -->
+            <div class="col-md-6">
+                <div class="dashboard-card">
+                    <h3><i class="fas fa-microphone text-success"></i> Voice Commands</h3>
+                    <div class="command-list">
+                        <h5>Developer Commands:</h5>
+                        <div class="command-item">"Build my [branch] branch"</div>
+                        <div class="command-item">"Deploy [branch] to staging"</div>
+                        <div class="command-item">"Create pull request for [branch]"</div>
+                        <div class="command-item">"Show my recent builds"</div>
+                        <div class="command-item">"Check build status"</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Voice Commands -->
+            <div class="col-md-6">
+                <div class="dashboard-card">
+                    <h3><i class="fas fa-history text-info"></i> Recent Voice Commands</h3>
+                    <div id="recentCommandsList" class="mt-3">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let isRecording = false;
+        let recognition = null;
+        const currentUser = 'developer'; // In real app, this would come from authentication
+
+        // Initialize voice recognition
+        function initVoiceRecognition() {
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+
+                recognition.onstart = function() {
+                    isRecording = true;
+                    document.getElementById('startVoice').style.display = 'none';
+                    document.getElementById('stopVoice').style.display = 'inline-block';
+                    document.getElementById('startVoice').classList.add('recording');
+                };
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    document.getElementById('voiceText').textContent = `You said: "${transcript}"`;
+                    processVoiceCommand(transcript);
+                };
+
+                recognition.onend = function() {
+                    isRecording = false;
+                    document.getElementById('startVoice').style.display = 'inline-block';
+                    document.getElementById('stopVoice').style.display = 'none';
+                    document.getElementById('startVoice').classList.remove('recording');
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    showVoiceResponse('Error: ' + event.error, false);
+                };
+            } else {
+                alert('Speech recognition not supported in this browser');
+            }
+        }
+
+        // Process voice command
+        function processVoiceCommand(command) {
+            fetch('/api/voice/command', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `command=${encodeURIComponent(command)}&username=${currentUser}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                showVoiceResponse(data.message, data.success);
+                if (data.success) {
+                    loadDashboard();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showVoiceResponse('Error processing command', false);
+            });
+        }
+
+        // Show voice response
+        function showVoiceResponse(message, success) {
+            const responseDiv = document.getElementById('voiceResponse');
+            const resultDiv = document.getElementById('commandResult');
+            
+            resultDiv.textContent = message;
+            resultDiv.className = success ? 'text-success' : 'text-danger';
+            responseDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                responseDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Load dashboard data
+        function loadDashboard() {
+            fetch(`/api/dashboard/user/${currentUser}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateStatistics(data);
+                    updateMyBuilds(data.myBuilds);
+                    updateRecentCommands(data.myCommands);
+                })
+                .catch(error => {
+                    console.error('Error loading dashboard:', error);
+                });
+        }
+
+        // Update statistics
+        function updateStatistics(data) {
+            document.getElementById('myBuilds').textContent = data.userStats?.total || 0;
+            document.getElementById('successfulBuilds').textContent = data.userStats?.successful || 0;
+            document.getElementById('failedBuilds').textContent = data.userStats?.failed || 0;
+            document.getElementById('voiceCommands').textContent = data.myCommands?.length || 0;
+        }
+
+        // Update my builds
+        function updateMyBuilds(builds) {
+            const container = document.getElementById('myBuildsList');
+            if (!builds || builds.length === 0) {
+                container.innerHTML = '<p class="text-muted">No builds found</p>';
+                return;
+            }
+
+            container.innerHTML = builds.slice(0, 5).map(build => `
+                <div class="card mb-2">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="card-title mb-0">Build ${build.jenkinsBuildId}</h6>
+                            <span class="badge status-${build.status.toLowerCase()}">${build.status}</span>
+                        </div>
+                        <p class="card-text">
+                            Branch: ${build.branchName}<br>
+                            Environment: ${build.environment}<br>
+                            Started: ${new Date(build.startedAt).toLocaleString()}
+                        </p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update recent commands
+        function updateRecentCommands(commands) {
+            const container = document.getElementById('recentCommandsList');
+            if (!commands || commands.length === 0) {
+                container.innerHTML = '<p class="text-muted">No recent commands</p>';
+                return;
+            }
+
+            container.innerHTML = commands.slice(0, 5).map(command => `
+                <div class="card mb-2">
+                    <div class="card-body">
+                        <h6 class="card-title">"${command.originalText}"</h6>
+                        <p class="card-text">
+                            Status: ${command.status}<br>
+                            Response: ${command.response}<br>
+                            Time: ${new Date(command.createdAt).toLocaleString()}
+                        </p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Quick action functions
+        function buildBranch() {
+            const branch = document.getElementById('branchInput').value.trim();
+            if (!branch) {
+                alert('Please enter a branch name');
+                return;
+            }
+            processVoiceCommand(`build my ${branch} branch`);
+        }
+
+        function deployToStaging() {
+            const branch = document.getElementById('branchInput').value.trim();
+            if (!branch) {
+                alert('Please enter a branch name');
+                return;
+            }
+            processVoiceCommand(`deploy ${branch} to staging`);
+        }
+
+        function createPullRequest() {
+            const branch = document.getElementById('branchInput').value.trim();
+            if (!branch) {
+                alert('Please enter a branch name');
+                return;
+            }
+            processVoiceCommand(`create pull request for ${branch}`);
+        }
+
+        function showMyBuilds() {
+            processVoiceCommand('show my recent builds');
+        }
+
+        // Event listeners
+        document.getElementById('startVoice').addEventListener('click', () => {
+            if (recognition) {
+                recognition.start();
+            }
+        });
+
+        document.getElementById('stopVoice').addEventListener('click', () => {
+            if (recognition) {
+                recognition.stop();
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initVoiceRecognition();
+            loadDashboard();
+            
+            // Refresh dashboard every 30 seconds
+            setInterval(loadDashboard, 30000);
+        });
+    </script>
+</body>
+</html> 

@@ -19,7 +19,8 @@ public class SecurityConfig {
     
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        // Using NoOpPasswordEncoder for plain text passwords (development only)
+        return org.springframework.security.crypto.password.NoOpPasswordEncoder.getInstance();
     }
     
     @Bean
@@ -28,14 +29,15 @@ public class SecurityConfig {
             .cors().and()
             .csrf().disable()
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/api/voice/**").permitAll()
-                .requestMatchers("/api/dashboard/**").permitAll()
-                .requestMatchers("/admin-dashboard.html").permitAll()
-                .requestMatchers("/user-dashboard.html").permitAll()
+                .requestMatchers("/api/**").permitAll()
+                .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/graphql/**").permitAll()
-                .anyRequest().authenticated()
+                .requestMatchers("/**").permitAll()
+                .anyRequest().permitAll()
             )
+            .headers().frameOptions().disable() // For H2 console
+            .and()
             .httpBasic();
         
         return http.build();

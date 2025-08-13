@@ -161,6 +161,80 @@ public class DashboardController {
         }
     }
     
+    @GetMapping("/api-deployments")
+    public ResponseEntity<List<Map<String, Object>>> getApiDeployments() {
+        try {
+            List<Build> apiDeployments = buildRepository.findApiDeployments();
+            List<Map<String, Object>> deploymentMaps = apiDeployments.stream()
+                .map(this::buildToMap)
+                .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(deploymentMaps);
+            
+        } catch (Exception e) {
+            log.error("Error getting API deployments", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    @GetMapping("/api-deployments/{buildId}/progress")
+    public ResponseEntity<Map<String, Object>> getApiDeploymentProgress(@PathVariable String buildId) {
+        try {
+            Build build = buildRepository.findByJenkinsBuildId(buildId)
+                .orElseThrow(() -> new RuntimeException("Build not found"));
+            
+            Map<String, Object> progress = new HashMap<>();
+            progress.put("buildId", build.getJenkinsBuildId());
+            progress.put("apiName", build.getApiName());
+            progress.put("status", build.getStatus());
+            progress.put("progress", build.getDeploymentProgress());
+            progress.put("startedAt", build.getStartedAt());
+            progress.put("completedAt", build.getCompletedAt());
+            
+            return ResponseEntity.ok(progress);
+            
+        } catch (Exception e) {
+            log.error("Error getting API deployment progress", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    @PostMapping("/builds/{buildId}/approve")
+    public ResponseEntity<Map<String, Object>> approveBuild(@PathVariable String buildId, @RequestBody Map<String, String> request) {
+        try {
+            Build build = buildRepository.findByJenkinsBuildId(buildId)
+                .orElseThrow(() -> new RuntimeException("Build not found"));
+            
+            if (build.getStatus() != Build.BuildStatus.PENDING_APPROVAL) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Build is not pending approval"));
+            }
+            
+            String approvedBy = request.get("approvedBy");
+            if (approvedBy == null) {
+                approvedBy = "admin";
+            }
+            
+            build.setStatus(Build.BuildStatus.RUNNING);
+            build.setApprovedBy(approvedBy);
+            build.setApprovedAt(LocalDateTime.now());
+            buildRepository.save(build);
+            
+            log.info("Build {} approved by {}", buildId, approvedBy);
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Build " + buildId + " approved successfully",
+                "buildId", buildId,
+                "status", "RUNNING"
+            ));
+            
+        } catch (Exception e) {
+            log.error("Error approving build", e);
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", "Error approving build: " + e.getMessage()));
+        }
+    }
+    
     private Map<String, Object> buildToMap(Build build) {
         Map<String, Object> map = new HashMap<>();
         map.put("id", build.getId());
@@ -181,6 +255,10 @@ public class DashboardController {
         if (build.getTriggeredBy() != null) {
             map.put("triggeredBy", build.getTriggeredBy().getUsername());
         }
+        
+        // Add API-specific fields
+        map.put("apiName", build.getApiName());
+        map.put("deploymentProgress", build.getDeploymentProgress());
         
         return map;
     }

@@ -2,14 +2,17 @@ package com.devops.service;
 
 import com.devops.entity.User;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
-@Slf4j
 public class MockGitHubService {
+    
+    private static final Logger log = LoggerFactory.getLogger(MockGitHubService.class);
     
     private final AtomicInteger prCounter = new AtomicInteger(100);
     private final Map<String, PullRequest> mockPullRequests = new HashMap<>();

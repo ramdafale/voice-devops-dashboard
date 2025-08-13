@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mock Jenkins Service - Voice DevOps Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: #fff !important;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            font-weight: bold;
+        }
+        .build-item {
+            border-left: 4px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        .build-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .status-success { border-left-color: #28a745; }
+        .status-failed { border-left-color: #dc3545; }
+        .status-running { border-left-color: #ffc107; }
+        .status-pending { border-left-color: #6c757d; }
+        .status-aborted { border-left-color: #6c757d; }
+        .progress {
+            height: 8px;
+            border-radius: 10px;
+        }
+        .btn-voice {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            border-radius: 25px;
+            padding: 10px 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .btn-voice:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .voice-indicator {
+            display: none;
+            color: #dc3545;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .stats-card {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .environment-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .env-production { background: #dc3545; color: white; }
+        .env-staging { background: #ffc107; color: black; }
+        .env-development { background: #28a745; color: white; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-cogs me-2"></i>Mock Jenkins Service
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text">
+                    <i class="fas fa-microphone me-2"></i>Voice DevOps Integration
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Voice Command Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-microphone me-2"></i>Voice Commands
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h5>Available Voice Commands:</h5>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>"Approve build 1234"</li>
+                            <li><i class="fas fa-check text-success me-2"></i>"Deploy release-2.1.0 to production"</li>
+                            <li><i class="fas fa-check text-success me-2"></i>"Build my feature branch"</li>
+                            <li><i class="fas fa-check text-success me-2"></i>"Deploy feature-branch to staging"</li>
+                            <li><i class="fas fa-check text-success me-2"></i>"Abort the current production build"</li>
+                            <li><i class="fas fa-check text-success me-2"></i>"Show all pending approvals"</li>
+                            <li><i class="fas fa-check text-success me-2"></i>"Deploy rewards details"</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <button class="btn btn-voice btn-lg" onclick="startVoiceRecognition()">
+                            <i class="fas fa-microphone me-2"></i>Start Voice
+                        </button>
+                        <div class="voice-indicator mt-2" id="voiceIndicator">
+                            <i class="fas fa-microphone-alt fa-2x"></i>
+                            <p>Listening...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="totalBuilds">24</div>
+                    <div>Total Builds</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="successRate">85%</div>
+                    <div>Success Rate</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="pendingApprovals">3</div>
+                    <div>Pending Approvals</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="activeBuilds">2</div>
+                    <div>Active Builds</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Builds -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-list me-2"></i>Recent Builds
+            </div>
+            <div class="card-body">
+                <div id="buildsContainer">
+                    <!-- Builds will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Production Deployments -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-rocket me-2"></i>Production Deployments
+            </div>
+            <div class="card-body">
+                <div id="productionBuilds">
+                    <!-- Production builds will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- API Deployments -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-code me-2"></i>API Deployments
+            </div>
+            <div class="card-body">
+                <div id="apiDeployments">
+                    <!-- API deployments will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mock data for builds
+        const mockBuilds = [
+            {
+                id: 'BUILD-1001',
+                jobName: 'feature-build',
+                branch: 'feature/user-authentication',
+                status: 'SUCCESS',
+                environment: 'development',
+                duration: '5m 23s',
+                triggeredBy: 'developer',
+                startedAt: '2024-01-15 10:30:00',
+                buildUrl: 'http://mock-jenkins.company.com/job/feature-build/1001'
+            },
+            {
+                id: 'BUILD-1003',
+                jobName: 'feature-build',
+                branch: 'feature/voice-commands',
+                status: 'RUNNING',
+                environment: 'development',
+                duration: '2m 15s',
+                triggeredBy: 'developer',
+                startedAt: '2024-01-15 11:45:00',
+                buildUrl: 'http://mock-jenkins.company.com/job/feature-build/1003',
+                progress: 45
+            },
+            {
+                id: 'BUILD-1000',
+                jobName: 'feature-build',
+                branch: 'feature/bug-fix',
+                status: 'FAILED',
+                environment: 'development',
+                duration: '3m 45s',
+                triggeredBy: 'developer',
+                startedAt: '2024-01-15 09:15:00',
+                buildUrl: 'http://mock-jenkins.company.com/job/feature-build/1000'
+            },
+            {
+                id: 'PROD-1004',
+                jobName: 'production-deploy',
+                branch: 'release-2.1.0',
+                status: 'PENDING_APPROVAL',
+                environment: 'production',
+                duration: '0s',
+                triggeredBy: 'admin',
+                startedAt: '2024-01-15 12:00:00',
+                buildUrl: 'http://mock-jenkins.company.com/job/production-deploy/1004',
+                requiresApproval: true
+            },
+            {
+                id: 'STAGE-1005',
+                jobName: 'staging-deploy',
+                branch: 'feature/new-feature',
+                status: 'RUNNING',
+                environment: 'staging',
+                duration: '1m 30s',
+                triggeredBy: 'developer',
+                startedAt: '2024-01-15 12:30:00',
+                buildUrl: 'http://mock-jenkins.company.com/job/staging-deploy/1005',
+                progress: 60
+            },
+            {
+                id: 'API-1006',
+                jobName: 'api-deploy',
+                branch: 'user-api-v2',
+                status: 'RUNNING',
+                environment: 'production',
+                duration: '0s',
+                triggeredBy: 'admin',
+                startedAt: '2024-01-15 12:45:00',
+                buildUrl: 'http://mock-jenkins.company.com/job/api-deploy/1006',
+                progress: 75,
+                apiName: 'User API v2'
+            }
+        ];
+
+        // Voice recognition simulation
+        function startVoiceRecognition() {
+            const voiceBtn = document.querySelector('.btn-voice');
+            const voiceIndicator = document.getElementById('voiceIndicator');
+            
+            voiceBtn.style.display = 'none';
+            voiceIndicator.style.display = 'block';
+            
+            // Simulate voice command processing
+            setTimeout(() => {
+                const commands = [
+                    "Approve build PROD-1004",
+                    "Deploy release-2.1.0 to production",
+                    "Build my feature branch",
+                    "Deploy feature-branch to staging",
+                    "Abort the current production build",
+                    "Show all pending approvals",
+                    "Deploy rewards details"
+                ];
+                
+                const randomCommand = commands[Math.floor(Math.random() * commands.length)];
+                processVoiceCommand(randomCommand);
+                
+                voiceBtn.style.display = 'block';
+                voiceIndicator.style.display = 'none';
+            }, 3000);
+        }
+
+        function processVoiceCommand(command) {
+            console.log('Processing voice command:', command);
+            
+            // Handle specific "deploy rewards details" command
+            if (command.toLowerCase().includes('deploy rewards details')) {
+                deployRewardsDetailsAPI();
+                return;
+            }
+            
+            // Simulate API call to voice DevOps dashboard
+            fetch('http://localhost:8080/api/voice/command', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `command=${encodeURIComponent(command)}&username=admin`
+            }).then(response => response.json())
+            .then(data => {
+                showNotification('Voice Command Processed', data.message || 'Command executed successfully', 'success');
+                updateBuilds();
+            }).catch(error => {
+                showNotification('Voice Command Error', 'Failed to process voice command', 'error');
+            });
+        }
+
+        function deployRewardsDetailsAPI() {
+            console.log('Deploying Rewards Details API...');
+            
+            // Call Spring Boot API to deploy rewards details
+            fetch('http://localhost:8080/api/voice/command', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `command=${encodeURIComponent('deploy rewards details api')}&username=admin`
+            }).then(response => response.json())
+            .then(data => {
+                showNotification('API Deployment Started', data.message || 'Rewards Details API deployment initiated. Progress tracking enabled.', 'success');
+                
+                // Start polling for build updates
+                pollForRewardsAPIDeployment();
+            }).catch(error => {
+                console.error('Error deploying Rewards Details API:', error);
+                showNotification('API Deployment Error', 'Failed to deploy Rewards Details API', 'error');
+            });
+        }
+
+        function pollForRewardsAPIDeployment() {
+            // Poll every 500ms to check for new API deployments
+            const pollInterval = setInterval(() => {
+                fetch('http://localhost:8080/api/dashboard/api-deployments')
+                    .then(response => response.json())
+                    .then(deployments => {
+                        // Find the most recent rewards API deployment
+                        const rewardsDeployment = deployments.find(d => 
+                            d.apiName && d.apiName.toLowerCase().includes('rewards') && 
+                            d.status === 'RUNNING'
+                        );
+                        
+                        if (rewardsDeployment) {
+                            // Update the display with real data
+                            updateBuildsFromAPI();
+                            
+                            // Check if deployment is complete
+                            if (rewardsDeployment.status === 'SUCCESS' || rewardsDeployment.status === 'FAILED') {
+                                clearInterval(pollInterval);
+                                showNotification('API Deployment Completed', 
+                                    `Rewards Details API deployment ${rewardsDeployment.status.toLowerCase()}!`, 
+                                    rewardsDeployment.status === 'SUCCESS' ? 'success' : 'error');
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error polling for API deployment:', error);
+                    });
+            }, 500);
+            
+            // Stop polling after 10 seconds to avoid infinite polling
+            setTimeout(() => {
+                clearInterval(pollInterval);
+            }, 10000);
+        }
+
+        function updateBuildsFromAPI() {
+            // Fetch real build data from Spring Boot API
+            Promise.all([
+                fetch('http://localhost:8080/api/dashboard/builds').then(r => r.json()),
+                fetch('http://localhost:8080/api/dashboard/api-deployments').then(r => r.json())
+            ]).then(([builds, apiDeployments]) => {
+                // Update mock builds with real data
+                mockBuilds.length = 0; // Clear existing mock data
+                
+                // Add all builds from API
+                builds.forEach(build => {
+                    mockBuilds.push({
+                        id: build.jenkinsBuildId,
+                        jobName: build.jobName,
+                        branch: build.branchName,
+                        status: build.status,
+                        environment: build.environment,
+                        duration: build.durationSeconds ? `${Math.floor(build.durationSeconds / 60)}m ${build.durationSeconds % 60}s` : '0s',
+                        triggeredBy: build.triggeredBy,
+                        startedAt: build.startedAt ? build.startedAt.replace('T', ' ') : new Date().toISOString().replace('T', ' ').substring(0, 19),
+                        buildUrl: build.buildUrl,
+                        progress: build.deploymentProgress || 0,
+                        apiName: build.apiName,
+                        requiresApproval: build.requiresApproval
+                    });
+                });
+                
+                // Add API deployments
+                apiDeployments.forEach(deployment => {
+                    if (!mockBuilds.find(b => b.id === deployment.jenkinsBuildId)) {
+                        mockBuilds.push({
+                            id: deployment.jenkinsBuildId,
+                            jobName: deployment.jobName,
+                            branch: deployment.branchName,
+                            status: deployment.status,
+                            environment: deployment.environment,
+                            duration: deployment.durationSeconds ? `${Math.floor(deployment.durationSeconds / 60)}m ${deployment.durationSeconds % 60}s` : '0s',
+                            triggeredBy: deployment.triggeredBy,
+                            startedAt: deployment.startedAt ? deployment.startedAt.replace('T', ' ') : new Date().toISOString().replace('T', ' ').substring(0, 19),
+                            buildUrl: deployment.buildUrl,
+                            progress: deployment.deploymentProgress || 0,
+                            apiName: deployment.apiName,
+                            requiresApproval: deployment.requiresApproval
+                        });
+                    }
+                });
+                
+                // Update statistics
+                updateStatisticsFromAPI();
+                
+                // Re-render the builds
+                renderBuilds();
+            }).catch(error => {
+                console.error('Error updating builds from API:', error);
+            });
+        }
+
+        function updateStatisticsFromAPI() {
+            fetch('http://localhost:8080/api/dashboard/admin')
+                .then(response => response.json())
+                .then(data => {
+                    // Update statistics
+                    if (data.buildStats) {
+                        document.getElementById('totalBuilds').textContent = data.buildStats.total || 0;
+                        const successRate = data.buildStats.total > 0 ? 
+                            Math.round((data.buildStats.successful / data.buildStats.total) * 100) : 0;
+                        document.getElementById('successRate').textContent = successRate + '%';
+                    }
+                    
+                    if (data.pendingApprovals) {
+                        document.getElementById('pendingApprovals').textContent = data.pendingApprovals.length || 0;
+                    }
+                    
+                    // Count running builds
+                    const runningBuilds = mockBuilds.filter(build => build.status === 'RUNNING').length;
+                    document.getElementById('activeBuilds').textContent = runningBuilds;
+                })
+                .catch(error => {
+                    console.error('Error updating statistics from API:', error);
+                });
+        }
+
+        function showNotification(title, message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                <strong>${title}:</strong> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.card'));
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        function renderBuilds() {
+            const buildsContainer = document.getElementById('buildsContainer');
+            const productionBuilds = document.getElementById('productionBuilds');
+            const apiDeployments = document.getElementById('apiDeployments');
+            
+            buildsContainer.innerHTML = '';
+            productionBuilds.innerHTML = '';
+            apiDeployments.innerHTML = '';
+            
+            mockBuilds.forEach(build => {
+                const buildElement = createBuildElement(build);
+                
+                if (build.environment === 'production') {
+                    productionBuilds.appendChild(buildElement);
+                } else if (build.jobName === 'api-deploy') {
+                    apiDeployments.appendChild(buildElement);
+                } else {
+                    buildsContainer.appendChild(buildElement);
+                }
+            });
+        }
+
+        function createBuildElement(build) {
+            const buildDiv = document.createElement('div');
+            buildDiv.className = `build-item status-${build.status.toLowerCase().replace('_', '-')}`;
+            
+            const statusIcon = getStatusIcon(build.status);
+            const envBadge = getEnvironmentBadge(build.environment);
+            const progressBar = build.progress ? `
+                <div class="progress mt-2">
+                    <div class="progress-bar" role="progressbar" style="width: ${build.progress}%" 
+                         aria-valuenow="${build.progress}" aria-valuemin="0" aria-valuemax="100">
+                        ${build.progress}%
+                    </div>
+                </div>
+            ` : '';
+            
+            const approvalButton = build.requiresApproval && build.status === 'PENDING_APPROVAL' ? `
+                <button class="btn btn-success btn-sm mt-2" onclick="approveBuild('${build.id}')">
+                    <i class="fas fa-check me-1"></i>Approve
+                </button>
+            ` : '';
+            
+            buildDiv.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="mb-1">${build.id}</h5>
+                        <p class="mb-1"><strong>Job:</strong> ${build.jobName}</p>
+                        <p class="mb-1"><strong>Branch:</strong> ${build.branch}</p>
+                        <p class="mb-1"><strong>Status:</strong> ${statusIcon} ${build.status}</p>
+                        <p class="mb-1"><strong>Duration:</strong> ${build.duration}</p>
+                        <p class="mb-1"><strong>Triggered by:</strong> ${build.triggeredBy}</p>
+                        <p class="mb-1"><strong>Started:</strong> ${build.startedAt}</p>
+                        ${build.apiName ? `<p class="mb-1"><strong>API:</strong> ${build.apiName}</p>` : ''}
+                    </div>
+                    <div class="text-end">
+                        ${envBadge}
+                        ${approvalButton}
+                    </div>
+                </div>
+                ${progressBar}
+                <div class="mt-2">
+                    <a href="${build.buildUrl}" target="_blank" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-external-link-alt me-1"></i>View Build
+                    </a>
+                </div>
+            `;
+            
+            return buildDiv;
+        }
+
+        function getStatusIcon(status) {
+            const icons = {
+                'SUCCESS': '<i class="fas fa-check-circle text-success"></i>',
+                'FAILED': '<i class="fas fa-times-circle text-danger"></i>',
+                'RUNNING': '<i class="fas fa-spinner fa-spin text-warning"></i>',
+                'PENDING_APPROVAL': '<i class="fas fa-clock text-secondary"></i>',
+                'ABORTED': '<i class="fas fa-stop-circle text-secondary"></i>'
+            };
+            return icons[status] || '<i class="fas fa-question-circle text-secondary"></i>';
+        }
+
+        function getEnvironmentBadge(environment) {
+            const badges = {
+                'production': '<span class="environment-badge env-production">PRODUCTION</span>',
+                'staging': '<span class="environment-badge env-staging">STAGING</span>',
+                'development': '<span class="environment-badge env-development">DEV</span>'
+            };
+            return badges[environment] || '';
+        }
+
+        function approveBuild(buildId) {
+            // Call Spring Boot API to approve build
+            fetch(`http://localhost:8080/api/builds/${buildId}/approve`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    approvedBy: 'admin'
+                })
+            }).then(response => response.json())
+            .then(data => {
+                showNotification('Build Approved', `Build ${buildId} has been approved and is now running`, 'success');
+                updateBuildsFromAPI(); // Refresh data from API
+            }).catch(error => {
+                console.error('Error approving build:', error);
+                showNotification('Build Approval Error', 'Failed to approve build', 'error');
+            });
+        }
+
+        function updateBuilds() {
+            // Update builds from API instead of simulating
+            updateBuildsFromAPI();
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load initial data from API
+            updateBuildsFromAPI();
+            
+            // Update builds every 5 seconds
+            setInterval(updateBuildsFromAPI, 5000);
+        });
+    </script>
+</body>
+</html> 
