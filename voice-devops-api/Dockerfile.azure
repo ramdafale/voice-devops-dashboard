@@ -1,0 +1,54 @@
+# Azure App Service Optimized Dockerfile
+# Multi-stage build for production deployment
+
+# Build stage
+FROM mcr.microsoft.com/java/jdk:17-zulu-ubuntu as builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy Maven wrapper and pom.xml
+COPY mvnw .
+COPY .mvn .mvn
+COPY pom.xml .
+
+# Make mvnw executable
+RUN chmod +x mvnw
+
+# Download dependencies
+RUN ./mvnw dependency:go-offline -B
+
+# Copy source code
+COPY src src
+
+# Build the application
+RUN ./mvnw clean package -DskipTests
+
+# Runtime stage - optimized for Azure App Service
+FROM mcr.microsoft.com/java/jre:17-zulu-ubuntu
+
+# Set working directory
+WORKDIR /app
+
+# Copy the built jar
+COPY --from=builder /app/target/voice-devops-api-1.0.0.jar app.jar
+
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN chown -R appuser:appuser /app
+USER appuser
+
+# Expose port (Azure App Service will use WEBSITES_PORT env var)
+EXPOSE 8080
+
+# Set environment variables for Azure
+ENV JAVA_OPTS="-Xmx1024m -Xms512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+ENV SERVER_PORT=8080
+ENV SERVER_ADDRESS=0.0.0.0
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+# Run the application
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"] 

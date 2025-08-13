@@ -1,0 +1,140 @@
+# Azure App Service Deployment Configuration
+# This file contains the configuration for deploying to Azure App Service
+
+# Azure App Service Plan Configuration
+appServicePlan:
+  name: voice-devops-plan
+  sku: B1  # Basic tier - can be upgraded to Standard or Premium
+  location: eastus
+  os: Linux
+  kind: linux
+
+# Azure App Service Configuration
+appService:
+  name: voice-devops-dashboard
+  location: eastus
+  plan: voice-devops-plan
+  runtime: java
+  javaVersion: 17
+  os: Linux
+  
+  # Application Settings (Environment Variables)
+  appSettings:
+    # Database Configuration
+    AZURE_SQL_CONNECTION_STRING: "jdbc:sqlserver://your-server.database.windows.net:1433;databaseName=voice_devops_db;encrypt=true;trustServerCertificate=false;loginTimeout=30;"
+    AZURE_SQL_USERNAME: "your-username"
+    AZURE_SQL_PASSWORD: "your-password"
+    
+    # Security Configuration
+    ADMIN_USERNAME: "admin"
+    ADMIN_PASSWORD: "your-secure-password"
+    
+    # Jenkins Configuration
+    JENKINS_URL: "https://your-jenkins-instance.com"
+    JENKINS_USERNAME: "your-jenkins-username"
+    JENKINS_API_TOKEN: "your-jenkins-token"
+    
+    # GitHub Configuration
+    GITHUB_API_URL: "https://api.github.com"
+    GITHUB_TOKEN: "your-github-token"
+    GITHUB_OWNER: "your-github-username"
+    GITHUB_REPO: "your-repository-name"
+    
+    # Deployment Configuration
+    DEPLOYMENT_AGENT_ENABLED: "true"
+    MAX_CONCURRENT_DEPLOYMENTS: "5"
+    DEPLOYMENT_TIMEOUT: "300"
+    AUTO_APPROVAL: "false"
+    
+    # Voice Recognition
+    VOICE_RECOGNITION_ENABLED: "false"
+    VOICE_RECOGNITION_LANGUAGE: "en-US"
+    VOICE_RECOGNITION_CONFIDENCE: "0.8"
+    
+    # CORS Configuration
+    ALLOWED_ORIGINS: "https://*.azurewebsites.net,https://*.azure.com"
+    
+    # Application Insights (Optional)
+    APPLICATIONINSIGHTS_CONNECTION_STRING: "your-app-insights-connection-string"
+    
+    # Port Configuration
+    PORT: "8080"
+    WEBSITES_PORT: "8080"
+
+# Azure SQL Database Configuration (Optional)
+sqlDatabase:
+  name: voice_devops_db
+  location: eastus
+  sku: Basic
+  maxSizeBytes: 2147483648  # 2GB
+  administratorLogin: "your-admin-username"
+  administratorLoginPassword: "your-admin-password"
+
+# Azure Container Registry Configuration (Optional)
+containerRegistry:
+  name: voiceDevOpsRegistry
+  location: eastus
+  sku: Basic
+
+# Network Configuration
+network:
+  virtualNetworkName: voice-devops-vnet
+  subnetName: voice-devops-subnet
+  addressPrefix: "10.0.0.0/16"
+  subnetPrefix: "10.0.1.0/24"
+
+# Monitoring and Logging
+monitoring:
+  applicationInsights:
+    name: voice-devops-insights
+    location: eastus
+    kind: web
+    applicationType: web
+  
+  logAnalytics:
+    name: voice-devops-logs
+    location: eastus
+    sku: PerGB2018
+
+# Backup Configuration
+backup:
+  enabled: true
+  frequency: "1D"  # Daily
+  retention: "30D"  # 30 days
+
+# Scaling Configuration
+scaling:
+  minInstances: 1
+  maxInstances: 10
+  rules:
+    - metricName: "CpuPercentage"
+      threshold: 70
+      timeWindow: "PT5M"
+      scaleAction:
+        direction: "Increase"
+        type: "ChangeCount"
+        value: 1
+        cooldown: "PT5M"
+    
+    - metricName: "CpuPercentage"
+      threshold: 30
+      timeWindow: "PT5M"
+      scaleAction:
+        direction: "Decrease"
+        type: "ChangeCount"
+        value: 1
+        cooldown: "PT5M"
+
+# Deployment Slots
+deploymentSlots:
+  - name: staging
+    autoSwapSlotName: production
+  
+  - name: production
+    autoSwapSlotName: ""
+
+# Custom Domain Configuration
+customDomains:
+  - name: "your-domain.com"
+    sslBinding: true
+    hostName: "api.your-domain.com" 
